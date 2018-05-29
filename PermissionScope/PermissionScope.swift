@@ -55,6 +55,8 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
     public var unauthorizedButtonColor:UIColor?
     /// Messages for the body label of the dialog presented when requesting access.
     lazy var permissionMessages: [PermissionType : String] = [PermissionType : String]()
+    /// Operation queue for setting self.waitingForBluetooth and self.waitingForMotion to false
+    let backgroundQueue = OperationQueue()
     
     // MARK: View hierarchy for custom alert
     let baseView    = UIView()
@@ -68,7 +70,7 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
     }()
 
     lazy var bluetoothManager:CBPeripheralManager = {
-        return CBPeripheralManager(delegate: self, queue: nil, options:[CBPeripheralManagerOptionShowPowerAlertKey: false])
+        return CBPeripheralManager(delegate: self, queue: self.backgroundQueue.underlyingQueue, options:[CBPeripheralManagerOptionShowPowerAlertKey: false])
     }()
     
     lazy var motionManager:CMMotionActivityManager = {
@@ -956,7 +958,7 @@ typealias resultsForConfigClosure     = ([PermissionResult]) -> Void
         let today = Date()
         motionManager.queryActivityStarting(from: today,
             to: today,
-            to: .main) { activities, error in
+            to: self.backgroundQueue) { activities, error in
                 if let error = error , error._code == Int(CMErrorMotionActivityNotAuthorized.rawValue) {
                     self.motionPermissionStatus = .unauthorized
                 } else {
